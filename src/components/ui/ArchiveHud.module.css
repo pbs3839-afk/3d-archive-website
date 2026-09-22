@@ -132,6 +132,13 @@
   color: var(--ink);
 }
 
+/* The drawer the tour is holding on. */
+.indexItem[data-current='true'] {
+  background: rgba(255, 178, 87, 0.12);
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 var(--amber);
+}
+
 .indexItem:disabled {
   opacity: 0.35;
   cursor: default;

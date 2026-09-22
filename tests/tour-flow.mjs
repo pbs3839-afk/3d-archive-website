@@ -130,7 +130,15 @@ for (const [index, stop] of TOUR.entries()) {
     held.stage === 'tour' && held.tourStop === stop.id && held.tourReady,
     `${stop.code} hold: ${JSON.stringify(held)}`,
   );
-  // @card-checks (Task 6)
+  const card = await page.evaluate(
+    () => document.querySelector('section[aria-label="Drawer tour"]')?.innerText ?? '',
+  );
+  expect(
+    card.includes(stop.code) && card.includes(stop.label) && card.includes(`${stop.files} DOSSIERS`),
+    `${stop.code}: card reads "${card.replace(/\s+/g, ' ')}"`,
+  );
+  const status = await page.evaluate(() => document.querySelector('[role="status"]')?.innerText ?? '');
+  expect(status.includes(`${index + 1} OF 5`), `${stop.code}: status reads "${status}"`);
   await page.screenshot({ path: `${OUT}/tour-${index + 1}-${stop.code}.png` });
 
   const focus = await screenOf(stop.id);
@@ -168,7 +176,10 @@ expect(
   travelling.stage === 'tour' && travelling.tourStop === 'Locker_02' && !travelling.tourReady,
   `travelling to B-04: ${JSON.stringify(travelling)}`,
 );
-// @travel-card-check (Task 6)
+const travelCard = await page.evaluate(
+  () => document.querySelector('section[aria-label="Drawer tour"]')?.dataset.visible ?? 'missing',
+);
+expect(travelCard === 'false', `tour card while travelling: data-visible=${travelCard}`);
 
 /* ------------------------------------------------ open from the tour, close back */
 await scrollInto('Locker_03');
@@ -194,7 +205,50 @@ expect(Math.abs(back.scrollY - before.scrollY) <= 1, `scroll moved on close: ${b
 expect(drift < 0.01, `camera moved ${(drift * 100).toFixed(1)} cm after the close`);
 expect(Math.abs(peek - 0.06) < 0.002, `C-08 drawer at ${peek} m after close, expected the 0.06 m peek`);
 
-// @card-button-and-index (Task 6)
+/* ------------------------------------------------ the card's OPEN DRAWER button */
+await page.mouse.move(5, 895);
+await scrollInto('Locker_04');
+const openButton = page.locator('section[aria-label="Drawer tour"] button:has-text("OPEN DRAWER")');
+if ((await openButton.count()) === 0) {
+  failures.push('no OPEN DRAWER button on the tour card');
+} else {
+  await openButton.click();
+  await page.waitForFunction(
+    () => {
+      const s = window.__archive.getState();
+      return s.stage === 'locker' && s.selectedLocker === 'Locker_04';
+    },
+    null,
+    { timeout: 5000 },
+  );
+  await settle();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => window.__archive.getState().stage === 'tour', null, { timeout: 15000 });
+  await settle();
+}
+
+/* ------------------------------------------------ the index, in the tour, navigates */
+await scrollInto('Locker_01');
+const indexShown = await page.getAttribute('nav[aria-label="Compartment index"]', 'data-visible');
+if (indexShown !== 'true') {
+  failures.push(`compartment index hidden in the tour (data-visible=${indexShown})`);
+} else {
+  await page.click('nav[aria-label="Compartment index"] button:has-text("B-04")');
+  await waitForScrollRest(page);
+  const indexed = await state();
+  const current = await page.evaluate(
+    () =>
+      document.querySelector('nav[aria-label="Compartment index"] button[data-current="true"]')?.innerText ?? '',
+  );
+  expect(
+    indexed.stage === 'tour' &&
+      indexed.tourStop === 'Locker_02' &&
+      indexed.tourReady &&
+      indexed.selected === null &&
+      current.includes('B-04'),
+    `index in the tour: ${JSON.stringify(indexed)}, current "${current}"`,
+  );
+}
 
 /* ------------------------------------------------ reverse */
 const reverse = [];
