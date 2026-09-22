@@ -11,6 +11,7 @@ import { ArchiveHud } from './ArchiveHud';
 import { FileDetailPanel } from './FileDetailPanel';
 import { Intro } from './Intro';
 import { ScrollIntro, skipIntro } from './ScrollIntro';
+import { TourCard } from './TourCard';
 import styles from './ArchiveExperience.module.css';
 
 /**
@@ -55,6 +56,7 @@ export function ArchiveExperience() {
       <ScrollIntro trackRef={trackRef} />
       <Intro />
       <ArchiveHud />
+      <TourCard />
       <FileDetailPanel />
     </main>
   );

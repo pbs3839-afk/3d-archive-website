@@ -3,12 +3,14 @@
 import { ARCHIVE_META, LOCKERS, getLocker } from '@/data/archive';
 import { useBack } from '@/hooks/useArchiveNavigation';
 import { useArchiveStore } from '@/store/archiveStore';
+import { scrollToChapter } from './ScrollIntro';
 import styles from './ArchiveHud.module.css';
 
 const STATUS_BY_STAGE = {
   intro: 'STANDBY',
   approach: 'DESCENDING',
   vault: 'VAULT OPEN — SELECT COMPARTMENT',
+  tour: 'DRAWER TOUR',
   locker: 'COMPARTMENT OPEN',
   file: 'DOSSIER ON SCREEN',
 } as const;
@@ -20,6 +22,9 @@ const STATUS_BY_STAGE = {
  * in, but they are unreachable by keyboard and fiddly on a small screen, so
  * the same five targets exist here as real focusable buttons. Escape and the
  * BACK button cover the way out.
+ *
+ * In the tour the index navigates instead of opening: a row scrolls to that
+ * drawer's chapter, and the tour card's button is what opens it.
  */
 export function ArchiveHud() {
   const stage = useArchiveStore((s) => s.stage);
@@ -32,12 +37,21 @@ export function ArchiveHud() {
   const isLockerOpen = useArchiveStore((s) => s.isLockerOpen);
   const hoveredFile = useArchiveStore((s) => s.hoveredFile);
   const setHoveredFile = useArchiveStore((s) => s.setHoveredFile);
+  const tourStop = useArchiveStore((s) => s.tourStop);
   const back = useBack();
 
-  const canSelect = stage === 'vault' && !isCameraMoving;
+  const inTour = stage === 'tour';
+  const showIndex = stage === 'vault' || inTour;
+  const canSelect = showIndex && !isCameraMoving;
   const canGoBack = stage === 'locker' || stage === 'file';
   const locker = getLocker(selectedLocker);
   const showDossiers = stage === 'locker' && Boolean(locker);
+  const tourNumber = LOCKERS.findIndex((entry) => entry.id === tourStop) + 1;
+  const status = locker
+    ? `${locker.code} · ${locker.label}`
+    : inTour && tourNumber > 0
+      ? `DRAWER TOUR — ${tourNumber} OF ${LOCKERS.length}`
+      : STATUS_BY_STAGE[stage];
 
   return (
     <div className={styles.root}>
@@ -49,14 +63,14 @@ export function ArchiveHud() {
 
       <div className={styles.status} role="status" aria-live="polite">
         <span className={styles.dot} data-active={stage !== 'intro'} />
-        {locker ? `${locker.code} · ${locker.label}` : STATUS_BY_STAGE[stage]}
+        {status}
       </div>
 
       <nav
         className={styles.index}
-        data-visible={stage === 'vault'}
+        data-visible={showIndex}
         aria-label="Compartment index"
-        inert={stage !== 'vault' ? true : undefined}
+        inert={showIndex ? undefined : true}
       >
         <p className={styles.indexTitle}>COMPARTMENT INDEX</p>
         <ul className={styles.indexList}>
@@ -66,8 +80,10 @@ export function ArchiveHud() {
                 type="button"
                 className={styles.indexItem}
                 data-hovered={hoveredLocker === entry.id}
+                data-current={inTour && tourStop === entry.id}
+                aria-current={inTour && tourStop === entry.id ? 'true' : undefined}
                 disabled={!canSelect}
-                onClick={() => selectLocker(entry.id)}
+                onClick={() => (inTour ? scrollToChapter(entry.id) : selectLocker(entry.id))}
                 onMouseEnter={() => setHoveredLocker(entry.id)}
                 onMouseLeave={() => setHoveredLocker(null)}
                 onFocus={() => setHoveredLocker(entry.id)}
@@ -134,6 +150,9 @@ export function ArchiveHud() {
         </p>
         <p className={styles.hint} data-visible={stage === 'locker'}>
           SELECT A DOSSIER
+        </p>
+        <p className={`${styles.hint} ${styles.hintTour}`} data-visible={inTour}>
+          OPEN THE DRAWER · SCROLL TO CONTINUE
         </p>
       </div>
     </div>

@@ -132,6 +132,13 @@
   color: var(--ink);
 }
 
+/* The drawer the tour is holding on. */
+.indexItem[data-current='true'] {
+  background: rgba(255, 178, 87, 0.12);
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 var(--amber);
+}
+
 .indexItem:disabled {
   opacity: 0.35;
   cursor: default;
@@ -160,6 +167,7 @@
 /* ------------------------------------------------------------------ footer */
 
 .footer {
+  position: relative;
   grid-column: 1 / -1;
   grid-row: 3;
   display: flex;
@@ -223,6 +231,14 @@
 
 .hint[data-visible='true'] {
   opacity: 1;
+}
+
+/* The tour's hint sits at the right edge without taking a slot in the row:
+   the hidden hints still occupy theirs, and a third one shifted the vault
+   hint off centre. */
+.hintTour {
+  position: absolute;
+  right: 0;
 }
 
 /* ------------------------------------------------------------------ mobile */

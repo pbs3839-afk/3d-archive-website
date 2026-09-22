@@ -9,10 +9,11 @@ import { create } from 'zustand';
  *   intro     title card, cabinet in darkness         — scroll owns the camera
  *   approach  cabinet revealed, camera moving in      — scroll owns the camera
  *   vault     outer doors open, lockers selectable    — scroll owns the camera
+ *   tour      the camera visits one drawer at a time  — scroll owns the camera
  *   locker    one locker open, files fanned out       — click owns the camera
  *   file      one dossier in close-up                 — click owns the camera
  */
-export type Stage = 'intro' | 'approach' | 'vault' | 'locker' | 'file';
+export type Stage = 'intro' | 'approach' | 'vault' | 'tour' | 'locker' | 'file';
 
 /** Rendering budget, resolved once from the device. */
 export type QualityTier = 'high' | 'medium' | 'low';
@@ -31,6 +32,12 @@ export interface ArchiveState {
   isVaultOpen: boolean;
   /** True while any camera timeline is running — suppresses input. */
   isCameraMoving: boolean;
+  /** Drawer of the current tour chapter, travel included; null outside the tour. */
+  tourStop: string | null;
+  /** True while a tour chapter holds on its drawer. */
+  tourReady: boolean;
+  /** Where closing a drawer returns to: the stage it was opened from. */
+  returnStage: 'vault' | 'tour';
 
   quality: QualityTier;
   /** Coarse pointer (touch). Hover affordances are dropped when true. */
@@ -40,13 +47,15 @@ export interface ArchiveState {
   setStage: (stage: Stage) => void;
   selectLocker: (id: string) => void;
   selectFile: (id: string) => void;
-  /** Step back one stage: file -> locker -> vault. Returns the new stage. */
+  /** Step back one stage: file -> locker -> vault or tour. Returns the new stage. */
   goBack: () => Stage;
   setHoveredLocker: (id: string | null) => void;
   setHoveredFile: (id: string | null) => void;
   setLockerOpen: (open: boolean) => void;
   setVaultOpen: (open: boolean) => void;
   setCameraMoving: (moving: boolean) => void;
+  /** Commit the tour position. Called every scroll frame; a no-op unless it changed. */
+  setTour: (stop: string | null, ready: boolean) => void;
   setDeviceProfile: (profile: {
     quality: QualityTier;
     isTouch: boolean;
@@ -65,6 +74,9 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   isLockerOpen: false,
   isVaultOpen: false,
   isCameraMoving: false,
+  tourStop: null,
+  tourReady: false,
+  returnStage: 'vault',
 
   quality: 'high',
   isTouch: false,
@@ -73,14 +85,15 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setStage: (stage) => set({ stage }),
 
   selectLocker: (id) =>
-    set({
+    set((state) => ({
       stage: 'locker',
+      returnStage: state.stage === 'tour' ? 'tour' : 'vault',
       selectedLocker: id,
       selectedFile: null,
       hoveredLocker: null,
       hoveredFile: null,
       isLockerOpen: false,
-    }),
+    })),
 
   selectFile: (id) => set({ stage: 'file', selectedFile: id, hoveredFile: null }),
 
@@ -91,13 +104,14 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
       return 'locker';
     }
     if (stage === 'locker') {
+      const { returnStage } = get();
       set({
-        stage: 'vault',
+        stage: returnStage,
         selectedLocker: null,
         selectedFile: null,
         isLockerOpen: false,
       });
-      return 'vault';
+      return returnStage;
     }
     return stage;
   },
@@ -107,7 +121,23 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setLockerOpen: (isLockerOpen) => set({ isLockerOpen }),
   setVaultOpen: (isVaultOpen) => set({ isVaultOpen }),
   setCameraMoving: (isCameraMoving) => set({ isCameraMoving }),
+  setTour: (tourStop, tourReady) => {
+    const state = get();
+    if (state.tourStop === tourStop && state.tourReady === tourReady) return;
+    set({ tourStop, tourReady });
+  },
   setDeviceProfile: ({ quality, isTouch, prefersReducedMotion }) =>
     set({ quality, isTouch, prefersReducedMotion }),
 }));
+
+/**
+ * Whether a drawer answers the pointer right now: any live drawer once the
+ * vault is open, but in the tour only the one the camera is holding on.
+ */
+export function canSelectLocker(state: ArchiveState, id: string): boolean {
+  if (state.isCameraMoving) return false;
+  if (state.stage === 'vault') return state.isVaultOpen;
+  if (state.stage === 'tour') return state.tourReady && state.tourStop === id;
+  return false;
+}
 

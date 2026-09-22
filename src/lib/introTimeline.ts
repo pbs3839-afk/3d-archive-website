@@ -1,5 +1,5 @@
 import { OUTER_DOOR_OPEN_ANGLE } from './cabinetLayout';
-import { cameraRig, currentOverviewPose, type OverviewPoseName } from './cameraRig';
+import { cameraRig, currentOverviewPose, type CameraRig, type OverviewPoseName } from './cameraRig';
 import { LIGHT_TARGETS, getSceneHandles, setAmbientLevel } from './sceneRegistry';
 import { getVaultDoors } from './vaultRegistry';
 import { openRotationFor } from '@/components/canvas/HingedPanel';
@@ -47,21 +47,33 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-export function applyIntroProgress(p: number): void {
-  /* -------------------------------------------------------------- camera */
+/**
+ * Camera pose of the intro at progress `p`, without touching the rig.
+ *
+ * Split out so the story can ask "where would the camera be?" — closing a
+ * drawer returns to exactly that frame (see `storySnapshot`).
+ */
+export function introCameraPose(p: number): CameraRig {
   const active =
     SEGMENTS.find((s) => p < s.end) ?? SEGMENTS[SEGMENTS.length - 1];
   const from = currentOverviewPose(active.from);
   const to = currentOverviewPose(active.to);
   const t = segment(p, active.start, active.end);
 
-  cameraRig.px = lerp(from.px, to.px, t);
-  cameraRig.py = lerp(from.py, to.py, t);
-  cameraRig.pz = lerp(from.pz, to.pz, t);
-  cameraRig.tx = lerp(from.tx, to.tx, t);
-  cameraRig.ty = lerp(from.ty, to.ty, t);
-  cameraRig.tz = lerp(from.tz, to.tz, t);
-  cameraRig.fov = lerp(from.fov, to.fov, t);
+  return {
+    px: lerp(from.px, to.px, t),
+    py: lerp(from.py, to.py, t),
+    pz: lerp(from.pz, to.pz, t),
+    tx: lerp(from.tx, to.tx, t),
+    ty: lerp(from.ty, to.ty, t),
+    tz: lerp(from.tz, to.tz, t),
+    fov: lerp(from.fov, to.fov, t),
+  };
+}
+
+export function applyIntroProgress(p: number): void {
+  /* -------------------------------------------------------------- camera */
+  Object.assign(cameraRig, introCameraPose(p));
 
   /* -------------------------------------------------------------- lights */
   const lit = segment(p, LIGHTS_IN.start, LIGHTS_IN.end);

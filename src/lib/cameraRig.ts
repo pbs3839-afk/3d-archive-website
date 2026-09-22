@@ -270,3 +270,28 @@ export function panelAwareShot(frame: CloseFrame): PanelAwareShot {
     shiftY: (-height * cover.y) / 2,
   };
 }
+
+/**
+ * Share of the viewport width the drawer tour's title card covers, on the
+ * left. MUST track TourCard.module.css. On a narrow screen the card runs
+ * across the top instead, and the drawer is simply centred.
+ */
+export function tourCardCoverage(): number {
+  return isPanelBottomSheet() ? 0 : 0.4;
+}
+
+/**
+ * The tour's close shot: `frame` fitted into the part of the screen the title
+ * card leaves free. `panelAwareShot` mirrored — the card is on the left, so
+ * the view slides left and the drawer lands in the middle of the right-hand
+ * part.
+ */
+export function tourShot(frame: CloseFrame): PanelAwareShot {
+  const cover = tourCardCoverage();
+  const width = frame.width / (1 - cover);
+  return {
+    distance: fitDistance(width, frame.height, frame.fov, viewportAspect),
+    shiftX: -(width * cover) / 2,
+    shiftY: 0,
+  };
+}

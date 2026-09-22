@@ -27,3 +27,12 @@ export function classificationStyle(level: Classification): ClassificationStyle 
 export function classificationColor(level: Classification): string {
   return STYLES[level].hex;
 }
+
+/** The most sensitive level among `levels`, or null when there are none. */
+export function highestClassification(levels: Iterable<Classification>): Classification | null {
+  let highest: Classification | null = null;
+  for (const level of levels) {
+    if (!highest || STYLES[level].weight > STYLES[highest].weight) highest = level;
+  }
+  return highest;
+}

@@ -1,0 +1,128 @@
+/*
+ * The drawer tour's title card.
+ *
+ * Left of the frame, below the HUD readout and clear above the compartment
+ * index. The tour camera leaves the left 40% of the screen for it — that share
+ * is `tourCardCoverage()` in cameraRig.ts, and the two must agree.
+ */
+.root {
+  position: fixed;
+  z-index: 30;
+  top: clamp(110px, 20vh, 200px);
+  left: var(--hud-pad);
+  width: min(320px, 30vw);
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(6, 7, 8, 0.82),
+    rgba(6, 7, 8, 0.5) 75%,
+    rgba(6, 7, 8, 0)
+  );
+  border-left: 1px solid var(--line-strong);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity var(--dur-panel) var(--ease-out),
+    transform var(--dur-panel) var(--ease-out);
+}
+
+.root[data-visible='true'] {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.code {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+}
+
+.label {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  color: var(--ink);
+}
+
+.meta {
+  margin: 0;
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  color: var(--ink-dim);
+}
+
+.stamp {
+  align-self: flex-start;
+  margin: 6px 0 4px;
+  padding: 5px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--stamp);
+  border: 1.5px solid var(--stamp);
+  transform: rotate(-2deg);
+}
+
+.open {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 9px 16px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.open:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .open:hover:not(:disabled) {
+    color: var(--amber);
+    border-color: var(--amber);
+  }
+}
+
+@media (pointer: coarse) {
+  .open {
+    min-height: 44px;
+  }
+}
+
+/* Phones: across the top under the readout; the drawer is centred below. */
+@media (max-width: 767px) {
+  .root {
+    top: 96px;
+    right: var(--hud-pad);
+    width: auto;
+    padding: 12px 14px;
+    gap: 6px;
+  }
+
+  .code {
+    font-size: 28px;
+  }
+}
+
+/* Reduced motion: keep the fade, drop the travel. */
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root[data-visible='true'] {
+    transform: none;
+  }
+
+  .root {
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+}

@@ -8,7 +8,7 @@
  * Run:  node tests/drawer-flow.mjs      (dev server must be on :3100)
  */
 import { mkdirSync } from 'node:fs';
-import { launchBrowser } from './browser.mjs';
+import { gotoVault, launchBrowser } from './browser.mjs';
 
 const OUT = 'tests/shots';
 mkdirSync(OUT, { recursive: true });
@@ -53,10 +53,7 @@ await page.waitForSelector('canvas');
 await page.waitForTimeout(3500);
 
 // Vault
-await page.evaluate(() =>
-  window.scrollTo(0, document.documentElement.scrollHeight),
-);
-await page.waitForTimeout(2600);
+await gotoVault(page);
 log.push({ beat: 'vault', ...(await state()) });
 await page.screenshot({ path: `${OUT}/flow-1-vault.png` });
 

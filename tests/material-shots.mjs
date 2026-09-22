@@ -19,7 +19,7 @@
  * The dev server must be on :3100.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { launchBrowser } from './browser.mjs';
+import { gotoVault, launchBrowser } from './browser.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((arg) => {
@@ -139,8 +139,7 @@ await page.waitForSelector('canvas');
 await page.waitForTimeout(3500);
 const atTop = await inspect();
 
-await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-await page.waitForTimeout(2600);
+await gotoVault(page);
 const vault = await inspect();
 const luminance = { vault: await shot('vault') };
 

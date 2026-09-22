@@ -12,7 +12,14 @@
 
 ## Global Constraints
 
-- **git 작업 금지**: 이 폴더는 git 저장소가 아니다. 각 태스크의 마지막은 "커밋" 대신 **체크포인트**(검증 결과 기록)다.
+- **git**: 브랜치 `feature/scroll-chapters`에서 작업한다. 각 태스크의 체크포인트에서 검증을 통과하면 그 태스크의 파일만 아래 메시지로 커밋한다. 커밋 전에 `git status`/`git diff`로 확인하고, 메시지 끝에 `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`을 붙인다. **push와 `main` 병합은 하지 않는다**(모두 끝난 뒤 사용자에게 따로 묻는다).
+  - Task 1: `[feat] 스크롤 챕터 표 추가`
+  - Task 2: `[test] 테스트가 SKIP 버튼으로 금고에 가도록 변경`
+  - Task 3: `[refactor] 인트로 카메라 계산을 introCameraPose로 분리` (introTimeline.ts), `[feat] 서랍 투어 카메라 자세 추가` (cameraRig.ts, lockerRegistry.ts)
+  - Task 4: `[feat] 금고 뒤 서랍 투어 스크롤 연결`
+  - Task 5: `[feat] 투어 중 클릭 규칙과 닫기 복귀`
+  - Task 6: `[feat] 투어 제목 카드와 HUD 색인·문구`
+  - Task 7: `[docs] 2단계 스펙 상태를 구현 완료로 변경`
 - **외부 연결 금지**: 새 패키지 설치, 다운로드, 배포, push, 외부 서비스 연결 없음.
 - **dev 서버**
   - `preview_start` 이름 `"archive"`(포트 3100)로 띄운다. 모든 브라우저 테스트는 이 서버를 쓴다.
