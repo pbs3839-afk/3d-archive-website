@@ -1,0 +1,362 @@
+/*
+ * HUD layer.
+ *
+ * The root is a full-screen grid that never intercepts the pointer; only the
+ * individual controls re-enable pointer events, so a click anywhere else still
+ * reaches the 3D scene.
+ */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  padding: var(--hud-pad);
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-dim);
+}
+
+.readout {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.brand {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--ink);
+}
+
+.meta {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: var(--ink-faint);
+}
+
+.status {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+  max-width: 46vw;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-align: right;
+  color: var(--ink-dim);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.dot[data-active='true'] {
+  background: var(--amber);
+  box-shadow: 0 0 10px rgba(255, 178, 87, 0.7);
+}
+
+/* ------------------------------------------------------- compartment index */
+
+.index {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: end;
+  width: min(300px, 40vw);
+  padding: 12px 14px;
+  /* The index sits over the cabinet. A soft scrim keeps it readable without
+     drawing a hard-edged panel across the scene. */
+  background: radial-gradient(
+    120% 120% at 0% 100%,
+    rgba(6, 7, 8, 0.88),
+    rgba(6, 7, 8, 0.4) 70%,
+    rgba(6, 7, 8, 0) 100%
+  );
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity var(--dur-panel) var(--ease-out),
+    transform var(--dur-panel) var(--ease-out);
+}
+
+.index[data-visible='true'] {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.indexTitle {
+  margin: 0 0 8px;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  color: var(--ink-faint);
+}
+
+.indexList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.indexItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* Driven from 3D hover state in ArchiveHud.tsx — must keep working on touch,
+   so it stays outside the pointer query below. */
+.indexItem[data-hovered='true']:not(:disabled) {
+  background: rgba(255, 178, 87, 0.09);
+  color: var(--ink);
+}
+
+.indexItem:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.indexCode {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+}
+
+.indexLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indexCount {
+  font-size: 9px;
+  color: var(--ink-faint);
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.footer {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 34px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.back[data-visible='true'] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Scoped to the visible state on purpose: `.back:disabled` on its own
+   out-specifies `.back { opacity: 0 }` and would make the hidden button
+   ghost in during the intro. */
+.back[data-visible='true']:disabled {
+  opacity: 0.4;
+}
+
+.back:disabled {
+  cursor: default;
+}
+
+.kbd {
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+}
+
+.hint {
+  margin: 0 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.hint[data-visible='true'] {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ mobile */
+
+@media (max-width: 767px) {
+  .root {
+    font-size: 10px;
+  }
+
+  .status {
+    max-width: 52vw;
+  }
+
+  /* Index becomes a horizontally scrollable strip above the back button so it
+     never covers the cabinet on a tall, narrow screen. */
+  .index {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    align-self: end;
+  }
+
+  .indexList {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    border-top: none;
+    scrollbar-width: none;
+  }
+
+  .indexList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .indexItem {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: auto;
+    min-width: 116px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    background: rgba(12, 14, 13, 0.72);
+    backdrop-filter: blur(6px);
+  }
+
+  .indexLabel {
+    max-width: 120px;
+    font-size: 8.5px;
+  }
+
+  .indexCount {
+    display: none;
+  }
+
+  .hint {
+    display: none;
+  }
+}
+
+/*
+ * Touch targets.
+ *
+ * Keyed off the pointer rather than the viewport: a touch laptop needs the
+ * bigger hit area at desktop widths too, and a narrow desktop window does not
+ * need it at all. 44px is the smallest reliably tappable target.
+ */
+@media (pointer: coarse) {
+  .back {
+    min-height: 44px;
+    padding: 13px 18px;
+  }
+
+  .indexItem {
+    min-height: 44px;
+  }
+}
+
+/*
+ * Hover.
+ *
+ * Gated so a tap on a touch screen does not leave the row lit up until the
+ * user taps somewhere else — touch fires a synthetic hover that never clears.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .indexItem:hover:not(:disabled) {
+    background: rgba(255, 178, 87, 0.09);
+    color: var(--ink);
+  }
+
+  .back:hover:not(:disabled) {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+}
+
+/* Reduced motion: keep the fade, drop the travel. See FileDetailPanel. */
+@media (prefers-reduced-motion: reduce) {
+  .index,
+  .back {
+    transition: opacity var(--dur-fast) var(--ease-out);
+    transform: none;
+  }
+
+  .index[data-visible='true'],
+  .back[data-visible='true'] {
+    transform: none;
+  }
+}
+
+/*
+ * On a phone the HUD's top row sits directly over the card fan, which is a
+ * light surface — the readout was landing cream-on-cream. A scrim behind the
+ * top band keeps it readable without moving the composition.
+ */
+@media (max-width: 767px) {
+  .root::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 120px;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(6, 7, 8, 0.88) 0%,
+      rgba(6, 7, 8, 0.5) 55%,
+      rgba(6, 7, 8, 0) 100%
+    );
+  }
+
+  .readout,
+  .status {
+    position: relative;
+  }
+}

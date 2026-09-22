@@ -1,0 +1,108 @@
+/*
+ * Global shell.
+ *
+ * Deliberately no web font: the type is a system monospace stack, so the
+ * `<Html>` labels printed on the 3D cards never reflow after a font swap and
+ * the page has no build-time or runtime network dependency.
+ */
+
+:root {
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Segoe UI Mono',
+    'Roboto Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --ink: #d9dbd4;
+  --ink-dim: #8b8f86;
+  --ink-faint: #7f837c;
+  --void: #07080a;
+  --line: rgba(190, 196, 182, 0.16);
+  --line-strong: rgba(190, 196, 182, 0.34);
+  --amber: #ffb257;
+  --alert: #ff4d3d;
+
+  --hud-pad: clamp(14px, 2.6vw, 32px);
+  --gutter: 16px;
+
+  /* Motion. Curves are deliberately stronger than the CSS built-ins, which are
+     too weak to read as intentional at these durations. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --dur-press: 140ms;
+  --dur-fast: 200ms;
+  --dur-base: 320ms;
+  --dur-panel: 420ms;
+  --dur-title: 900ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Set by useScrollLock while a locker or file is open: freezing the page is
+   what hands camera control cleanly from the scroll intro to the click
+   choreography. */
+html[data-scroll-locked='true'],
+html[data-scroll-locked='true'] body {
+  overflow: hidden;
+  touch-action: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* Skip link — the keyboard path to the cabinet without scrolling. */
+.srOnlyFocusable {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 60;
+  padding: 10px 14px;
+  background: #101211;
+  border: 1px solid var(--line-strong);
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  transform: translateY(-160%);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.srOnlyFocusable:focus-visible {
+  transform: translateY(0);
+}
+
+/*
+ * Reduced motion is handled per component, not globally.
+ *
+ * A blanket `transition-duration: 0.01ms` on `*` also deletes pure opacity and
+ * colour fades, which carry no movement and are the very transitions that stop
+ * a state change reading as a glitch. Each module drops its own transforms and
+ * keeps its own fades; see the blocks at the bottom of ArchiveHud,
+ * FileDetailPanel and Intro. The 3D side is handled in JS: choreography.ts
+ * shortens the timelines and CameraController drops the pointer parallax.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

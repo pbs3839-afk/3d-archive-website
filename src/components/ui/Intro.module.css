@@ -1,0 +1,176 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: var(--hud-pad);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-title) var(--ease-out);
+}
+
+.root[data-visible='true'] {
+  opacity: 1;
+}
+
+.frame {
+  width: min(760px, 100%);
+  text-align: center;
+  transform: translateY(0);
+  transition: transform var(--dur-title) var(--ease-out);
+}
+
+.root[data-visible='false'] .frame {
+  transform: translateY(-18px);
+}
+
+.title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 clamp(12px, 2.4vw, 28px);
+  font-size: clamp(30px, 8.2vw, 82px);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: 0.06em;
+  color: #eef0e9;
+  text-shadow: 0 0 46px rgba(255, 178, 87, 0.14);
+}
+
+/*
+ * Title reveal.
+ *
+ * Each word rises and un-blurs on its own beat. The delay is set inline from
+ * the word's index, so adding a word to ARCHIVE_META.title needs no CSS.
+ * `clip-path` on the wrapper means the words appear from behind a hard edge
+ * rather than fading in mid-air — closer to a title card than a tooltip.
+ */
+.word {
+  display: inline-block;
+  animation: wordIn 1.15s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes wordIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.38em);
+    filter: blur(9px);
+    letter-spacing: 0.24em;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+    letter-spacing: 0.06em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word {
+    animation: none;
+  }
+
+  /* The title card still cross-fades — only the vertical travel goes. */
+  .frame {
+    transition: none;
+    transform: none;
+  }
+
+  .root[data-visible='false'] .frame {
+    transform: none;
+  }
+}
+
+.subtitle {
+  margin: clamp(16px, 3vh, 26px) 0 0;
+  font-size: clamp(10px, 1.7vw, 13px);
+  letter-spacing: 0.3em;
+  color: var(--ink-dim);
+}
+
+.rule {
+  width: 64px;
+  height: 1px;
+  margin: clamp(22px, 4vh, 38px) auto;
+  background: var(--line-strong);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.scrollHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--ink-faint);
+}
+
+.scrollBar {
+  position: relative;
+  display: inline-block;
+  width: 1px;
+  height: 34px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.scrollDot {
+  position: absolute;
+  left: -1px;
+  width: 3px;
+  height: 10px;
+  background: var(--amber);
+  animation: descend 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes descend {
+  0% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(34px);
+    opacity: 0;
+  }
+}
+
+.skip {
+  pointer-events: auto;
+  padding: 9px 18px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+/* See the note in ArchiveHud.module.css — hover is gated so a tap does not
+   leave the control lit up on touch. */
+@media (hover: hover) and (pointer: fine) {
+  .skip:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+    background: rgba(190, 196, 182, 0.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollDot {
+    animation: none;
+    transform: translateY(12px);
+    opacity: 1;
+  }
+}
