@@ -151,7 +151,7 @@ export function ArchiveHud() {
         <p className={styles.hint} data-visible={stage === 'locker'}>
           SELECT A DOSSIER
         </p>
-        <p className={styles.hint} data-visible={inTour}>
+        <p className={`${styles.hint} ${styles.hintTour}`} data-visible={inTour}>
           OPEN THE DRAWER · SCROLL TO CONTINUE
         </p>
       </div>

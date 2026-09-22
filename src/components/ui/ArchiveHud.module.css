@@ -167,6 +167,7 @@
 /* ------------------------------------------------------------------ footer */
 
 .footer {
+  position: relative;
   grid-column: 1 / -1;
   grid-row: 3;
   display: flex;
@@ -230,6 +231,14 @@
 
 .hint[data-visible='true'] {
   opacity: 1;
+}
+
+/* The tour's hint sits at the right edge without taking a slot in the row:
+   the hidden hints still occupy theirs, and a third one shifted the vault
+   hint off centre. */
+.hintTour {
+  position: absolute;
+  right: 0;
 }
 
 /* ------------------------------------------------------------------ mobile */
