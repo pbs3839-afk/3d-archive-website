@@ -1,7 +1,7 @@
 import type { Object3D, PointLight } from 'three';
 import { Vector3 } from 'three';
 import { filedCardPose } from './cabinetLayout';
-import { closeDistance, closeFrame, panelAwareShot } from './cameraRig';
+import { closeDistance, closeFrame, panelAwareShot, tourShot, type CloseFrame } from './cameraRig';
 
 /**
  * The seam that makes the GLB swap a non-event.
@@ -160,5 +160,48 @@ export function fileCameraPose(
   pose.target.add(shift);
 
   return { position: pose.position, target: pose.target, fov: frame.fov };
+}
+
+/**
+ * What the tour holds in frame around each drawer: the 0.91 × 0.69 m front
+ * and a margin of cabinet round it.
+ */
+const TOUR_FRAME: CloseFrame = { width: 1.7, height: 1.1, fov: 40 };
+/** The tour looks down on each drawer by 10 degrees. */
+const TOUR_LOOK_DOWN = (10 * Math.PI) / 180;
+/** Share of the way an edge-column shot is drawn toward the cabinet's centre line. */
+const TOUR_CENTRE_PULL = 0.25;
+
+/**
+ * Camera pose the drawer tour holds on for one drawer.
+ *
+ * Solved live from the current viewport like every other pose, so a resize
+ * re-frames it. The whole view — camera and target together — is slid left so
+ * the drawer sits in the middle of the part of the screen the title card
+ * leaves free. Same fov as the vault shot, so the move there is pure travel.
+ */
+export function tourCameraPose(id: string): CameraPose | null {
+  const focus = getLockerWorldPosition(id);
+  if (!focus) return null;
+  const normal = getLockerWorldNormal(id, scratchNormal)?.clone() ?? new Vector3(0, 0, 1);
+
+  const shot = tourShot(TOUR_FRAME);
+  const direction = normal
+    .clone()
+    .multiplyScalar(Math.cos(TOUR_LOOK_DOWN))
+    .addScaledVector(UP, Math.sin(TOUR_LOOK_DOWN))
+    .normalize();
+
+  const position = focus.clone().addScaledVector(direction, shot.distance);
+  // Drift toward the cabinet's centre line so the edge columns are seen
+  // slightly from the side, like the drawer shot.
+  position.x += (0 - position.x) * TOUR_CENTRE_PULL;
+
+  const shift = new Vector3(shot.shiftX, shot.shiftY, 0);
+  return {
+    position: position.add(shift),
+    target: focus.clone().add(shift),
+    fov: TOUR_FRAME.fov,
+  };
 }
 
