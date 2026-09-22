@@ -25,21 +25,15 @@
 }
 
 /*
- * Scroll runway. Four viewports of empty height: the intro is scrubbed against
- * it while the fixed canvas stays put underneath. Shorter on phones, where a
- * long runway just feels like the page is broken.
+ * Scroll runway. Empty on purpose: the story is scrubbed against it while the
+ * fixed canvas stays put underneath. Its height comes from the chapter table
+ * (lib/chapters.ts) and is set by <ScrollIntro>; the table is shorter on
+ * phones, where a long runway just feels like the page is broken.
  */
 .track {
   position: relative;
   z-index: 1;
-  height: 400vh;
   pointer-events: none;
-}
-
-@media (max-width: 767px) {
-  .track {
-    height: 280vh;
-  }
 }
 
 /*

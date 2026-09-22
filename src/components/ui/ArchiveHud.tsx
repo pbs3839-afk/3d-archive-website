@@ -9,6 +9,7 @@ const STATUS_BY_STAGE = {
   intro: 'STANDBY',
   approach: 'DESCENDING',
   vault: 'VAULT OPEN — SELECT COMPARTMENT',
+  tour: 'DRAWER TOUR',
   locker: 'COMPARTMENT OPEN',
   file: 'DOSSIER ON SCREEN',
 } as const;

@@ -1,9 +1,11 @@
 /**
  * Scroll + layout probe.
  *
- * Written to answer two specific claims with measurements rather than
- * impressions: that scrolling runs in the wrong direction, and that sections
- * overlap. Both are checked at desktop and phone sizes.
+ * Answers two questions with measurements rather than impressions, at desktop,
+ * laptop and phone sizes: does the story only ever run forward as the page
+ * scrolls down (intro → approach → vault → tour, each tour chapter on its own
+ * drawer), and do any two HUD elements that are visible together overlap.
+ * Exits non-zero on either, or on any console error.
  *
  * Run:  node tests/scroll-probe.mjs
  * The dev server must already be running on :3100.
@@ -20,20 +22,18 @@ const VIEWPORTS = [
   { name: 'laptop', width: 1280, height: 720 },
   { name: 'phone', width: 390, height: 844 },
 ];
+const ORDER = ['intro', 'approach', 'vault', 'tour'];
 
-/** Read the store plus the live camera rig the scroll intro drives. */
+/** Read the store plus the live camera the scroll drives. */
 const readState = async (page) =>
   page.evaluate(() => {
     const s = window.__archive?.getState?.();
     return {
       stage: s?.stage ?? null,
+      tourStop: s?.tourStop ?? null,
       vaultOpen: s?.isVaultOpen ?? null,
       scrollY: Math.round(window.scrollY),
-      maxScroll: Math.round(
-        document.documentElement.scrollHeight - window.innerHeight,
-      ),
-      // The camera's distance from the cabinet is the observable the intro
-      // actually animates; it must fall monotonically as the user scrolls in.
+      maxScroll: Math.round(document.documentElement.scrollHeight - window.innerHeight),
       cameraZ: (() => {
         const c = document.querySelector('canvas');
         return c ? Number(c.dataset.probeZ ?? NaN) : NaN;
@@ -42,16 +42,14 @@ const readState = async (page) =>
   });
 
 /**
- * The rig is a module-local object, so expose its Z through the canvas
- * dataset from inside a rAF tick rather than reaching into the bundle.
+ * The camera lives on the R3F root; publish its Z through the canvas dataset
+ * from a rAF tick rather than reaching into the bundle.
  */
 const installProbe = async (page) =>
   page.evaluate(() => {
     const canvas = document.querySelector('canvas');
     if (!canvas) return false;
     const tick = () => {
-      // three stores the camera on the R3F root; read it off the WebGL context
-      // owner instead by sampling what the canvas last rendered from.
       const r3f = canvas.__r3f ?? canvas.parentElement?.__r3f;
       const cam = r3f?.root?.getState?.().camera;
       if (cam) canvas.dataset.probeZ = String(cam.position.z.toFixed(3));
@@ -81,21 +79,30 @@ for (const vp of VIEWPORTS) {
   await page.waitForTimeout(400);
 
   /* ------------------------------------------------ 1. scroll direction */
+  // One sample in every chapter, in page order, plus both ends.
+  const targets = await page.evaluate(() => {
+    const spans = window.__story.spans();
+    const at = (span, local) => span.start + local * (span.end - span.start);
+    return [
+      { name: 'top', p: 0 },
+      ...spans.map((span) => ({ name: span.id, p: at(span, span.kind === 'tour' ? 0.6 : 0.5) })),
+      { name: 'end', p: 1 },
+    ];
+  });
   const samples = [];
-  const steps = [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1];
-  for (const t of steps) {
-    await page.evaluate((frac) => {
+  for (const target of targets) {
+    await page.evaluate((p) => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      window.scrollTo(0, Math.round(max * frac));
-    }, t);
+      window.scrollTo(0, Math.round(max * p));
+    }, target.p);
     await page.waitForTimeout(1100); // scrub smoothing is 0.65s
-    samples.push({ t, ...(await readState(page)) });
+    samples.push({ name: target.name, ...(await readState(page)) });
+    if (target.name === 'vault') await page.screenshot({ path: `${OUT}/${vp.name}-vault.png` });
   }
 
   /* ------------------------------------------------ 2. section overlap */
-  // Everything on top of the canvas is a fixed overlay; "sections" here are
-  // the HUD regions. Overlap between two that are meant to be visible at the
-  // same time is the bug worth reporting.
+  // Measured at the end of the page: the last tour chapter, where the most
+  // HUD is on screen at once.
   const overlaps = await page.evaluate(() => {
     const pick = (sel) => document.querySelector(sel);
     const named = {
@@ -104,6 +111,7 @@ for (const vp of VIEWPORTS) {
       compartmentIndex: pick('nav[aria-label="Compartment index"]'),
       dossierIndex: pick('nav[aria-label="Dossier index"]'),
       panel: pick('aside[aria-label^="Dossier"]'),
+      tourCard: pick('section[aria-label="Drawer tour"]'),
     };
     const box = (el) => {
       if (!el) return null;
@@ -133,14 +141,13 @@ for (const vp of VIEWPORTS) {
     return {
       boxes,
       overlappingVisiblePairs: pairs,
-      horizontalOverflow:
-        document.documentElement.scrollWidth > window.innerWidth,
+      horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
       innerWidth: window.innerWidth,
     };
   });
 
-  await page.screenshot({ path: `${OUT}/${vp.name}-vault.png` });
+  await page.screenshot({ path: `${OUT}/${vp.name}-tour-end.png` });
 
   /* ---------------------------------------- 3. open a drawer and re-check */
   await page.evaluate(() => window.__archive.getState().selectLocker('Locker_03'));
@@ -173,3 +180,31 @@ for (const vp of VIEWPORTS) {
 }
 
 console.log(JSON.stringify(results, null, 2));
+
+const failures = [];
+for (const result of results) {
+  const name = result.viewport.name;
+  const stages = result.samples.map((sample) => sample.stage);
+  const ranks = stages.map((stage) => ORDER.indexOf(stage));
+  if (ranks.some((rank, i) => rank < 0 || (i > 0 && rank < ranks[i - 1]))) {
+    failures.push(`${name}: stages out of order: ${stages.join(' → ')}`);
+  }
+  const missing = ORDER.filter((stage) => !stages.includes(stage));
+  if (missing.length) failures.push(`${name}: never reached ${missing.join(', ')}`);
+  for (const sample of result.samples) {
+    if (sample.name.startsWith('tour-') && sample.tourStop !== sample.name.slice('tour-'.length)) {
+      failures.push(`${name}: ${sample.name} held on ${sample.tourStop}`);
+    }
+  }
+  if (result.overlaps.overlappingVisiblePairs.length) {
+    failures.push(`${name}: overlapping ${result.overlaps.overlappingVisiblePairs.join(', ')}`);
+  }
+  if (result.overlaps.horizontalOverflow) failures.push(`${name}: horizontal overflow`);
+  if (result.consoleErrors.length) failures.push(`${name}: console errors ${result.consoleErrors.join(' | ')}`);
+}
+if (failures.length) {
+  console.error(`FAILED\n${failures.join('\n')}`);
+  process.exitCode = 1;
+} else {
+  console.log('PASSED: the story runs forward with no overlaps and no errors at every viewport');
+}

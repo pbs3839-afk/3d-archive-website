@@ -9,10 +9,11 @@ import { create } from 'zustand';
  *   intro     title card, cabinet in darkness         — scroll owns the camera
  *   approach  cabinet revealed, camera moving in      — scroll owns the camera
  *   vault     outer doors open, lockers selectable    — scroll owns the camera
+ *   tour      the camera visits one drawer at a time  — scroll owns the camera
  *   locker    one locker open, files fanned out       — click owns the camera
  *   file      one dossier in close-up                 — click owns the camera
  */
-export type Stage = 'intro' | 'approach' | 'vault' | 'locker' | 'file';
+export type Stage = 'intro' | 'approach' | 'vault' | 'tour' | 'locker' | 'file';
 
 /** Rendering budget, resolved once from the device. */
 export type QualityTier = 'high' | 'medium' | 'low';
@@ -31,6 +32,10 @@ export interface ArchiveState {
   isVaultOpen: boolean;
   /** True while any camera timeline is running — suppresses input. */
   isCameraMoving: boolean;
+  /** Drawer of the current tour chapter, travel included; null outside the tour. */
+  tourStop: string | null;
+  /** True while a tour chapter holds on its drawer. */
+  tourReady: boolean;
 
   quality: QualityTier;
   /** Coarse pointer (touch). Hover affordances are dropped when true. */
@@ -47,6 +52,8 @@ export interface ArchiveState {
   setLockerOpen: (open: boolean) => void;
   setVaultOpen: (open: boolean) => void;
   setCameraMoving: (moving: boolean) => void;
+  /** Commit the tour position. Called every scroll frame; a no-op unless it changed. */
+  setTour: (stop: string | null, ready: boolean) => void;
   setDeviceProfile: (profile: {
     quality: QualityTier;
     isTouch: boolean;
@@ -65,6 +72,8 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   isLockerOpen: false,
   isVaultOpen: false,
   isCameraMoving: false,
+  tourStop: null,
+  tourReady: false,
 
   quality: 'high',
   isTouch: false,
@@ -107,6 +116,11 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setLockerOpen: (isLockerOpen) => set({ isLockerOpen }),
   setVaultOpen: (isVaultOpen) => set({ isVaultOpen }),
   setCameraMoving: (isCameraMoving) => set({ isCameraMoving }),
+  setTour: (tourStop, tourReady) => {
+    const state = get();
+    if (state.tourStop === tourStop && state.tourReady === tourReady) return;
+    set({ tourStop, tourReady });
+  },
   setDeviceProfile: ({ quality, isTouch, prefersReducedMotion }) =>
     set({ quality, isTouch, prefersReducedMotion }),
 }));

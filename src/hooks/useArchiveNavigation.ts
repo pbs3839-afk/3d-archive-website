@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
+import { cameraRig } from '@/lib/cameraRig';
 import { closeFile, closeLocker } from '@/lib/choreography';
+import { getLockerHandle, getLockerWorldPosition } from '@/lib/lockerRegistry';
+import { applyStoryProgress, getSpans, storySnapshot } from '@/lib/storyProgress';
 import { useArchiveStore } from '@/store/archiveStore';
 
 /**
@@ -50,19 +53,31 @@ export function useEscapeToGoBack(): void {
 }
 
 /**
- * Expose the store for debugging in development only.
+ * Expose the store — and the story's own maths — for debugging and the
+ * browser tests, in development only.
  *
  * Almost everything interesting here happens in refs, module registries and
  * GSAP timelines, none of which show up in React DevTools. One handle on
- * `window` turns "why did that open?" into a one-line question.
+ * `window` turns "why did that open?" into a one-line question. `__story`
+ * lets the tour test apply a progress directly (no scroll smoothing), read the
+ * camera rig, and find a drawer on screen.
  */
 export function useDevStoreHandle(): void {
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
-    const w = window as typeof window & { __archive?: unknown };
+    const w = window as typeof window & { __archive?: unknown; __story?: unknown };
     w.__archive = useArchiveStore;
+    w.__story = {
+      apply: applyStoryProgress,
+      snapshot: storySnapshot,
+      spans: getSpans,
+      rig: cameraRig,
+      lockerPosition: (id: string) => getLockerWorldPosition(id),
+      drawerZ: (id: string) => getLockerHandle(id)?.drawer.position.z ?? null,
+    };
     return () => {
       delete w.__archive;
+      delete w.__story;
     };
   }, []);
 }

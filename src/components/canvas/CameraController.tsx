@@ -21,6 +21,7 @@ const DRIFT_BY_STAGE: Record<Stage, number> = {
   intro: 0.14,
   approach: 0.1,
   vault: 0.08,
+  tour: 0.06,
   locker: 0.045,
   file: 0.018,
 };
