@@ -105,9 +105,13 @@ export function Locker({ definition }: LockerProps) {
     glowMaterial.opacity += (targetOpacity - glowMaterial.opacity) * k;
   });
 
-  const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+  // No stopPropagation here. R3F books the hover against this group but, on
+  // the next move, checks it against the mesh under the pointer; a stopped
+  // hover then reads "front panel -> pull handle" as leaving the drawer and
+  // fires pointerout while the pointer is still on it. Drawers never overlap,
+  // so there is nothing behind one that needs shielding from the event.
+  const handlePointerOver = () => {
     if (!interactive) return;
-    event.stopPropagation();
     setHoveredLocker(id);
   };
 
