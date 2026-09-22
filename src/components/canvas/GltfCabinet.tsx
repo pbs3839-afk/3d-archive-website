@@ -7,7 +7,7 @@ import type { Object3D, PointLight } from 'three';
 import { LOCKERS } from '@/data/archive';
 import { registerLocker } from '@/lib/lockerRegistry';
 import { registerVaultDoor } from '@/lib/vaultRegistry';
-import { useArchiveStore } from '@/store/archiveStore';
+import { canSelectLocker, useArchiveStore } from '@/store/archiveStore';
 
 /**
  * Adapter for the Blender model.
@@ -86,10 +86,6 @@ export function GltfCabinet({ url }: { url: string }) {
     };
   }, [nodes]);
 
-  const interactive = useArchiveStore(
-    (s) => s.stage === 'vault' && s.isVaultOpen && !s.isCameraMoving,
-  );
-
   /** Walk up from the hit object to find which locker was clicked. */
   const lockerIdFor = (object: Object3D): string | null => {
     let cursor: Object3D | null = object;
@@ -100,20 +96,24 @@ export function GltfCabinet({ url }: { url: string }) {
     return null;
   };
 
+  /** The locker under the pointer, if it may be selected right now. */
+  const selectableIdFor = (object: Object3D): string | null => {
+    const id = lockerIdFor(object);
+    return id && canSelectLocker(useArchiveStore.getState(), id) ? id : null;
+  };
+
   return (
     <primitive
       object={scene}
       onPointerOver={(event: ThreeEvent<PointerEvent>) => {
-        if (!interactive) return;
-        const id = lockerIdFor(event.object);
+        const id = selectableIdFor(event.object);
         if (!id) return;
         event.stopPropagation();
         setHoveredLocker(id);
       }}
       onPointerOut={() => setHoveredLocker(null)}
       onClick={(event: ThreeEvent<MouseEvent>) => {
-        if (!interactive) return;
-        const id = lockerIdFor(event.object);
+        const id = selectableIdFor(event.object);
         if (!id) return;
         event.stopPropagation();
         selectLocker(id);

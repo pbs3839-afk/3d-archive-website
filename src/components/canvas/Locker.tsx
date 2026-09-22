@@ -16,7 +16,7 @@ import {
 } from '@/lib/cabinetLayout';
 import { registerLocker } from '@/lib/lockerRegistry';
 import { metricBox } from '@/lib/metricBox';
-import { useArchiveStore } from '@/store/archiveStore';
+import { canSelectLocker, useArchiveStore } from '@/store/archiveStore';
 import type { LockerDefinition } from '@/types/archive';
 import { DrawerPull } from './DoorFurniture';
 import { Drawer } from './Drawer';
@@ -54,8 +54,10 @@ export function Locker({ definition }: LockerProps) {
   const isHovered = useArchiveStore((s) => s.hoveredLocker === id);
   const isSelected = useArchiveStore((s) => s.selectedLocker === id);
   const isTouch = useArchiveStore((s) => s.isTouch);
-  const interactive = useArchiveStore(
-    (s) => s.stage === 'vault' && s.isVaultOpen && !s.isCameraMoving,
+  const interactive = useArchiveStore((s) => canSelectLocker(s, id));
+  /** The tour is holding on this drawer: a faint outline says it opens. */
+  const isTourFocus = useArchiveStore(
+    (s) => s.stage === 'tour' && s.tourReady && s.tourStop === id,
   );
   const setHoveredLocker = useArchiveStore((s) => s.setHoveredLocker);
   const selectLocker = useArchiveStore((s) => s.selectLocker);
@@ -99,7 +101,7 @@ export function Locker({ definition }: LockerProps) {
     // Frame-rate independent approach, mutating refs rather than state so
     // hovering never triggers a React render of the 3D tree.
     const k = 1 - Math.exp(-delta * 9);
-    const targetOpacity = isSelected ? 0.6 : highlight ? 0.45 : 0;
+    const targetOpacity = isSelected ? 0.6 : highlight ? 0.45 : isTourFocus ? 0.3 : 0;
     glowMaterial.opacity += (targetOpacity - glowMaterial.opacity) * k;
   });
 
@@ -123,11 +125,13 @@ export function Locker({ definition }: LockerProps) {
     // before the camera starts moving.
     const drawer = drawerRef.current;
     if (drawer) {
+      // From wherever the drawer sits: in the tour it is already peeking out.
+      const rest = drawer.position.z;
       gsap.fromTo(
         drawer.position,
-        { z: 0 },
+        { z: rest },
         {
-          z: -0.012,
+          z: rest - 0.012,
           duration: 0.1,
           ease: 'power2.out',
           yoyo: true,

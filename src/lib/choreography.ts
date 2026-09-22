@@ -1,7 +1,6 @@
 import { gsap } from './gsapConfig';
 import { Vector3 } from 'three';
 import {
-  currentOverviewPose,
   cameraRig,
   seizeRig,
   type CameraRig,
@@ -9,6 +8,7 @@ import {
 import { DRAWER_TRAVEL } from './cabinetLayout';
 import { fileOffsetFor } from './fileLayout';
 import { fileCameraPose, getLockerHandle, lockerCameraPose } from './lockerRegistry';
+import { storySnapshot } from './storyProgress';
 import { getTray } from './trayRegistry';
 import { useArchiveStore } from '@/store/archiveStore';
 
@@ -135,9 +135,17 @@ export function openLocker(lockerId: string): Promise<void> {
   return settle(tl);
 }
 
-/** Files back in, drawer shut, camera returns to the vault overview. */
+/**
+ * Files back in, drawer shut, camera back to the scroll's frame.
+ *
+ * "Back" is wherever the scroll is: the vault overview, or a tour chapter
+ * with its drawer peeking out. The targets come from `storySnapshot()` — the
+ * same maths the scroll applies the moment it takes over again — so the
+ * hand-back has nothing to jump.
+ */
 export function closeLocker(lockerId: string): Promise<void> {
   const handle = getLockerHandle(lockerId);
+  const back = storySnapshot();
   const tl = begin();
   useArchiveStore.getState().setLockerOpen(false);
 
@@ -149,7 +157,7 @@ export function closeLocker(lockerId: string): Promise<void> {
   if (handle) {
     tl.to(
       handle.drawer.position,
-      { z: 0, duration: 0.85 * s, ease: 'power2.inOut' },
+      { z: back.peeks[lockerId] ?? 0, duration: 0.85 * s, ease: 'power2.inOut' },
       0.34 * s,
     );
     if (handle.interiorLight) {
@@ -161,7 +169,7 @@ export function closeLocker(lockerId: string): Promise<void> {
     }
   }
 
-  cameraTo(tl, currentOverviewPose('vault'), 1.15 * s, 0.4 * s);
+  cameraTo(tl, back.camera, 1.15 * s, 0.4 * s);
 
   return settle(tl);
 }

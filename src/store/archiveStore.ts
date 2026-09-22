@@ -36,6 +36,8 @@ export interface ArchiveState {
   tourStop: string | null;
   /** True while a tour chapter holds on its drawer. */
   tourReady: boolean;
+  /** Where closing a drawer returns to: the stage it was opened from. */
+  returnStage: 'vault' | 'tour';
 
   quality: QualityTier;
   /** Coarse pointer (touch). Hover affordances are dropped when true. */
@@ -45,7 +47,7 @@ export interface ArchiveState {
   setStage: (stage: Stage) => void;
   selectLocker: (id: string) => void;
   selectFile: (id: string) => void;
-  /** Step back one stage: file -> locker -> vault. Returns the new stage. */
+  /** Step back one stage: file -> locker -> vault or tour. Returns the new stage. */
   goBack: () => Stage;
   setHoveredLocker: (id: string | null) => void;
   setHoveredFile: (id: string | null) => void;
@@ -74,6 +76,7 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   isCameraMoving: false,
   tourStop: null,
   tourReady: false,
+  returnStage: 'vault',
 
   quality: 'high',
   isTouch: false,
@@ -82,14 +85,15 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setStage: (stage) => set({ stage }),
 
   selectLocker: (id) =>
-    set({
+    set((state) => ({
       stage: 'locker',
+      returnStage: state.stage === 'tour' ? 'tour' : 'vault',
       selectedLocker: id,
       selectedFile: null,
       hoveredLocker: null,
       hoveredFile: null,
       isLockerOpen: false,
-    }),
+    })),
 
   selectFile: (id) => set({ stage: 'file', selectedFile: id, hoveredFile: null }),
 
@@ -100,13 +104,14 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
       return 'locker';
     }
     if (stage === 'locker') {
+      const { returnStage } = get();
       set({
-        stage: 'vault',
+        stage: returnStage,
         selectedLocker: null,
         selectedFile: null,
         isLockerOpen: false,
       });
-      return 'vault';
+      return returnStage;
     }
     return stage;
   },
@@ -124,4 +129,15 @@ export const useArchiveStore = create<ArchiveState>((set, get) => ({
   setDeviceProfile: ({ quality, isTouch, prefersReducedMotion }) =>
     set({ quality, isTouch, prefersReducedMotion }),
 }));
+
+/**
+ * Whether a drawer answers the pointer right now: any live drawer once the
+ * vault is open, but in the tour only the one the camera is holding on.
+ */
+export function canSelectLocker(state: ArchiveState, id: string): boolean {
+  if (state.isCameraMoving) return false;
+  if (state.stage === 'vault') return state.isVaultOpen;
+  if (state.stage === 'tour') return state.tourReady && state.tourStop === id;
+  return false;
+}
 
