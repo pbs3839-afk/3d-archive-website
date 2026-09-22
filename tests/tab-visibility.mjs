@@ -11,7 +11,7 @@
  *
  * Run:  node tests/tab-visibility.mjs        (dev server on :3100)
  */
-import { launchBrowser } from './browser.mjs';
+import { gotoVault, launchBrowser } from './browser.mjs';
 
 const DRAWERS = [
   ['A-01', 'alpha'],
@@ -51,8 +51,7 @@ const settle = () =>
 await page.goto('http://localhost:3100', { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(3500);
-await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-await page.waitForTimeout(2600);
+await gotoVault(page);
 
 const failures = [];
 for (const [code, rearFile] of DRAWERS) {

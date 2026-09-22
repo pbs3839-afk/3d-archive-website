@@ -8,7 +8,7 @@
  *
  * Run:  node tests/texture-fallback.mjs      (dev server on :3100)
  */
-import { launchBrowser } from './browser.mjs';
+import { gotoVault, launchBrowser } from './browser.mjs';
 
 const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
@@ -27,8 +27,7 @@ const settle = () =>
 await page.goto('http://localhost:3100', { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(3500);
-await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-await page.waitForTimeout(2600);
+await gotoVault(page);
 await page.click('nav[aria-label="Compartment index"] button:has-text("A-01")');
 await page.waitForFunction(() => window.__archive.getState().stage === 'locker');
 await settle();
